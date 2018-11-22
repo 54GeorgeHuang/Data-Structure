@@ -3,21 +3,18 @@
 #include <assert.h>
 #include <string.h>
 #define MAX_EXPR 500
-#define MAX_STACKS 5
-#define LP 0
-#define RP 1
-#define PL 2
-#define MI 3
-#define TI 4
-#define DI 5
-#define EOS 6
-#define OP 7
-
-//typedef enum {lparen, rparen, plus, minus, times, divide, eos, operand} precedence;
+#define LP 0 //left (
+#define RP 1 //right )
+#define PL 2 //plus
+#define MI 3 //minus
+#define TI 4 //times
+#define DI 5 //divide
+#define EOS 6 //end of string
+#define OP 7 //operand
 
 char expr[MAX_EXPR] = "";
-char expr_pf[MAX_EXPR] = "";
-int isp[] = {0, 19, 12, 12, 13, 13, 0};
+char expr_pf[MAX_EXPR] = "";//expression for postfix
+int isp[] = {0, 19, 12, 12, 13, 13, 0};//in stack precedence
 int icp[] = {20, 19, 12, 12, 13, 13, 0};
 
 typedef struct stack* stackPointer;
@@ -36,6 +33,8 @@ void push(int item)
 	temp->data = item;
 	temp->link = top;
 	top = temp;
+
+	return;
 }	
 
 int pop()
@@ -82,52 +81,85 @@ double popF()
 	return item;
 }
 
-void int2String(char* symbol, char* symbolN, int* n)
+int getTokenPostFix(char* symbol, int* n)
 {
-	int k = 0;
-	while ( *symbol >= 48 && *symbol <= 57)
-	{
-		symbolN[k++] = *symbol;
-		*symbol = expr[(*n)++];
-	}
-	(*n)--;
-	symbolN[k++] = ' ';
-	symbolN[k] = '\0';
+	*symbol = expr_pf[(*n)++];
 
-	return;
-}
-
-int getToken(char* symbol, char* symbolN, int* n)
-{
-	*symbol = expr[(*n)++];
-	if (*symbol == '+' || *symbol == '-')
-	{
-		int flag;
-		for (flag = 1; *symbol == '+' || *symbol == '-'; *symbol = expr[(*n)++])
-		{
-			if (*symbol == '+') flag *= 1;
-			else if (*symbol == '-') flag *= -1;
-		}
-		(*n)--;
-		if (flag == 1) return PL;
-		if (flag == -1) return MI;
-	}
 	switch (*symbol)
 	{
 		case '(' :
 		 	return LP;
 		case ')' :
 			return RP;
+		case '+' :
+			return PL;
+		case '-' :
+			return MI;
 		case '/' :
 			return DI;
 		case '*' :
 			return TI;
+		case '\0' :
+			return EOS;
 		case '\n' :
 			return EOS;
 		default :
-			int2String(symbol, symbolN, n);
 			return OP;
 	}
+}
+
+int getInt(char* symbol, int* n)
+{
+	int k = 0;
+
+	while ( *symbol >= 48 && *symbol <= 57)
+	{
+		k *= 10;
+		k += *symbol - '0';
+		*symbol = expr_pf[(*n)++];
+	}
+	(*n)--;
+	
+	return k;
+}
+
+double eval(void)
+{
+	char symbol;
+	int token;
+	double op1, op2;
+	int n = 0;
+	topF = NULL;
+
+	token = getTokenPostFix(&symbol, &n);
+	while (token != EOS)
+	{
+		if (token == OP)
+			pushF( (double)getInt(&symbol, &n));
+		else
+		{
+			op2 = popF();
+			op1 = popF();
+			switch(token)
+			{
+				case PL:
+					pushF(op1+op2);
+					break;
+				case MI:
+					pushF(op1-op2);
+					break;
+				case TI:
+					pushF(op1*op2);
+					break;
+				case DI:
+					pushF(op1/op2);
+					break;
+			}
+		}
+		n++;
+		token = getTokenPostFix(&symbol, &n);
+	}
+	return popF();
 }
 
 void append(char* s, char c)
@@ -171,13 +203,64 @@ void printToken(int data)
 	}
 }
 
+void int2String(char* symbol, char* symbolN, int* n)//put multiple char(stands for int) to a string
+{
+	int k = 0;
+	while ( *symbol >= 48 && *symbol <= 57)
+	{
+		symbolN[k++] = *symbol;
+		*symbol = expr[(*n)++];
+	}
+	(*n)--;
+	symbolN[k++] = ' ';
+	symbolN[k] = '\0';
+
+	return;
+}
+
+int getToken(char* symbol, char* symbolN, int* n)//classify character
+{
+	*symbol = expr[(*n)++];//get the current char
+
+	if (*symbol == '+' || *symbol == '-')//plus/minus classify
+	{
+		int flag;
+		for (flag = 1; *symbol == '+' || *symbol == '-'; *symbol = expr[(*n)++])
+		{
+			if (*symbol == '+') flag *= 1;
+			else if (*symbol == '-') flag *= -1;
+		}
+		(*n)--;
+		if (flag == 1) return PL;
+		if (flag == -1) return MI;
+	}
+
+	switch (*symbol)
+	{
+		case '(' :
+		 	return LP;
+		case ')' :
+			return RP;
+		case '/' :
+			return DI;
+		case '*' :
+			return TI;
+		case '\n' :
+			return EOS;
+		default :
+			int2String(symbol, symbolN, n);
+			return OP;
+	}
+}
+
 void postfix(void)
 {
 	char symbol;
 	char symbolN[50];
 	int token;
 	int n = 0;
-	top = NULL;
+	top = NULL;//declare stack
+
 	push(EOS);
 	for (token = getToken(&symbol, symbolN, &n); token != EOS; token = getToken(&symbol, symbolN, &n))
 	{
@@ -200,93 +283,10 @@ void postfix(void)
 		printToken(token);
 }
 
-int getToken2(char* symbol, int* n)
-{
-	*symbol = expr_pf[(*n)++];
-
-
-	switch (*symbol)
-	{
-		case '(' :
-		 	return LP;
-		case ')' :
-			return RP;
-		case '+' :
-			return PL;
-		case '-' :
-			return MI;
-		case '/' :
-			return DI;
-		case '*' :
-			return TI;
-		case '\0' :
-			return EOS;
-		case '\n' :
-			return EOS;
-		default :
-			return OP;
-	}
-}
-
-int getInt(char* symbol, int* n)
-{
-	int k = 0;
-	while ( *symbol >= 48 && *symbol <= 57)
-	{
-		k *= 10;
-		k += *symbol - '0';
-		*symbol = expr_pf[(*n)++];
-	}
-	(*n)--;
-	
-	return k;
-}
-
-double eval(void)
-{
-	char symbol;
-	int token;
-	double op1, op2;
-	int n = 0;
-	topF = NULL;
-
-	token = getToken2(&symbol, &n);
-	while (token != EOS)
-	{
-		if (token == OP)
-			pushF( (double)getInt(&symbol, &n));
-		else
-		{
-			op2 = popF();
-			op1 = popF();
-			switch(token)
-			{
-				case PL:
-					pushF(op1+op2);
-					break;
-				case MI:
-					pushF(op1-op2);
-					break;
-				case TI:
-					pushF(op1*op2);
-					break;
-				case DI:
-					pushF(op1/op2);
-					break;
-			}
-		}
-		n++;
-		token = getToken2(&symbol, &n);
-		
-	}
-	return popF();
-}
-
 int main(void)
 {
 	FILE* f1 = fopen("infix.txt", "r");
 	FILE* f2 = fopen("postfix.txt", "w");
-	//freopen("infix.txt", "r", stdin);
 
 	while (fgets(expr, MAX_EXPR, f1) != NULL)
 	{
