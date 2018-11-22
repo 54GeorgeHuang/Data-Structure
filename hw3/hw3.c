@@ -18,8 +18,6 @@ typedef struct node
 }node;
 nodePointer priorityQueue;
 nodePointer root = NULL;
-nodePointer last = NULL;
-int heightNow;
 
 void input(char* s)
 {
@@ -136,6 +134,30 @@ void genNode(char* s)
 		table[s[i] - 32] = true;
 	}
 	return;
+}
+
+nodePointer pop(nodePointer start)
+{
+	if(root == NULL)
+	{
+		fprintf(stderr, "the heap is empty\n");
+		exit(EXIT_FAILURE);
+	}
+	nodePointer left = start->leftChild;
+	nodePointer right = start->rightChild;
+	nodePointer tmp = getLastLeaf();
+	while(tmp->frequency > left->frequency || tmp->frequency > right->frequency)
+	if(tmp->parent->leftChild == tmp)
+		tmp->parent->leftChild = NULL;
+	else
+		tmp->parent->rightChild = NULL;
+	tmp->parent = NULL;
+	tmp->leftChild = start->leftChild;
+	tmp->rightChild = start->rightChild;
+	start->leftChild->parent = tmp;
+	start->rightChild->parent = tmp;
+
+
 }
 
 void printTree(nodePointer start, int space)
