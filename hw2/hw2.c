@@ -284,15 +284,17 @@ double eval(void)
 
 int main(void)
 {
-	freopen("infix.txt", "r", stdin);
+	FILE* f1 = fopen("infix.txt", "r");
+	FILE* f2 = fopen("postfix.txt", "w");
+	//freopen("infix.txt", "r", stdin);
 
-	while (fgets(expr, MAX_EXPR, stdin) != NULL)
+	while (fgets(expr, MAX_EXPR, f1) != NULL)
 	{
 		if (strcmp(expr, "\n") == 0)
 			break;
 		postfix();
-		printf("%s", expr_pf);
-		printf("%12.2lf\n", eval());
+		fprintf(f2, "%s", expr_pf);
+		fprintf(f2, "%12.2lf\n", eval());
 		memset(expr, 0, MAX_EXPR);
 		memset(expr_pf, 0, MAX_EXPR);
 	}
